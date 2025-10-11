@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_fortune_wheel/flutter_fortune_wheel.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'task_list.dart';
 
 class CreateTaskScreen extends StatefulWidget {
   const CreateTaskScreen({super.key});
@@ -16,22 +19,15 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   final TextEditingController assignController = TextEditingController();
   final TextEditingController descController = TextEditingController();
   final TextEditingController dateController = TextEditingController();
-
-  // Name input for wheel
   final TextEditingController nameController = TextEditingController();
 
-  // Stream controller required by flutter_fortune_wheel
   final StreamController<int> selectedController = StreamController<int>();
-
-  // The wheel's items (starts empty)
   final List<String> members = [];
-
-  // Last selected index (used to display result)
   int? lastSelectedIndex;
+  bool isLoading = false;
 
   @override
   void dispose() {
-    // Always close controllers to avoid memory leaks
     titleController.dispose();
     assignController.dispose();
     descController.dispose();
@@ -41,6 +37,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     super.dispose();
   }
 
+  // Add name to the wheel
   void addName() {
     final name = nameController.text.trim();
     if (name.isEmpty) return;
@@ -50,16 +47,81 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     });
   }
 
+  // Spin the wheel
   void spinWheel() {
-    if (members.isEmpty) return; // don't spin empty wheel
+    if (members.isEmpty) return;
     final randIndex = Random().nextInt(members.length);
-    // send the chosen index to the FortuneWheel stream
     selectedController.add(randIndex);
-    // update UI and assign field
     setState(() {
       lastSelectedIndex = randIndex;
       assignController.text = members[randIndex];
     });
+  }
+
+  // Create Task Function — Saves to Firestore and redirects
+  Future<void> createTask() async {
+    final title = titleController.text.trim();
+    final assignedTo = assignController.text.trim();
+    final description = descController.text.trim();
+    final dueDate = dateController.text.trim();
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (title.isEmpty ||
+        assignedTo.isEmpty ||
+        description.isEmpty ||
+        dueDate.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in all fields")),
+      );
+      return;
+    }
+
+    if (user == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("No user logged in")));
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      await FirebaseFirestore.instance.collection('tasks').add({
+        'title': title,
+        'assigned_to': assignedTo,
+        'description': description,
+        'due_date': dueDate,
+        'created_by': user.uid,
+        'created_at': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Task created successfully!")),
+      );
+
+      // Clear fields
+      titleController.clear();
+      assignController.clear();
+      descController.clear();
+      dateController.clear();
+      setState(() => lastSelectedIndex = null);
+
+      // Redirect to Task List screen after short delay
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const TaskListScreen()),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error creating task: $e")));
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -70,25 +132,43 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         padding: const EdgeInsets.all(12.0),
         child: Column(
           children: [
-            // Task form
-            TextField(controller: titleController, decoration: const InputDecoration(labelText: "Title")),
-            TextField(controller: assignController, decoration: const InputDecoration(labelText: "Assign to")),
-            TextField(controller: descController, decoration: const InputDecoration(labelText: "Description")),
-            TextField(controller: dateController, decoration: const InputDecoration(labelText: "Due Date (DD/MM/YYYY)")),
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(labelText: "Title"),
+            ),
+            TextField(
+              controller: assignController,
+              decoration: const InputDecoration(labelText: "Assign to"),
+            ),
+            TextField(
+              controller: descController,
+              decoration: const InputDecoration(labelText: "Description"),
+            ),
+            TextField(
+              controller: dateController,
+              decoration: const InputDecoration(
+                labelText: "Due Date (DD/MM/YYYY)",
+              ),
+            ),
             const SizedBox(height: 12),
-            ElevatedButton(onPressed: () {
-              // Your "Create" logic here
-            }, child: const Text("Create")),
+
+            isLoading
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+                    onPressed: createTask,
+                    child: const Text("Create"),
+                  ),
 
             const SizedBox(height: 20),
 
-            // Add name row
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: nameController,
-                    decoration: const InputDecoration(labelText: "Enter name for wheel"),
+                    decoration: const InputDecoration(
+                      labelText: "Enter name for wheel",
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -98,15 +178,17 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
             const SizedBox(height: 20),
 
-            // The wheel (placeholder when empty)
             SizedBox(
               height: 220,
               child: members.isEmpty
-                  ? const Center(child: Text("No names added yet", style: TextStyle(fontSize: 16, color: Colors.grey)))
+                  ? const Center(
+                      child: Text(
+                        "No names added yet",
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                    )
                   : FortuneWheel(
-                      // provide the stream here (package expects Stream<int>)
                       selected: selectedController.stream,
-                      // prevent auto animate on first build if you like:
                       animateFirst: false,
                       items: [
                         for (var name in members)
@@ -115,10 +197,13 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                               padding: const EdgeInsets.all(8.0),
                               child: Text(
                                 name,
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          )
+                          ),
                       ],
                     ),
             ),
@@ -130,7 +215,10 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
             if (lastSelectedIndex != null)
               Text(
                 "🎉 Assigned to: ${members[lastSelectedIndex!]}",
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
           ],
         ),
