@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:878491995093:android:ffde3eeb1ed1077c648b5c",
+        "mobilesdk_app_id": "1:878491995093:android:c16698cec50112fe648b5c",
         "android_client_info": {
-          "package_name": "com.org.quicktask"
+          "package_name": "com.example.quick_task"
         }
       },
       "oauth_client": [],

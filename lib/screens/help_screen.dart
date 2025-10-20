@@ -19,7 +19,7 @@ class HelpScreen extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Icons.arrow_back),
                     onPressed: () {
-                      Navigator.pop(context); // 👈 Goes back to Settings
+                      Navigator.pop(context); // Goes back to Settings
                     },
                   ),
                   const SizedBox(width: 4),

@@ -1,20 +1,15 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+import 'dashboard_screen.dart';
 import 'signup_screen.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
-
-  @override
-  State<LoginScreen> createState() => _LoginPageState();
-}
-
-class _LoginPageState extends State<LoginScreen> {
-  bool rememberMe = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF6E9CC4), // Blue background
+      backgroundColor: const Color(0xFF6E9CC4),
       body: Center(
         child: SingleChildScrollView(
           child: Container(
@@ -28,8 +23,11 @@ class _LoginPageState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  "Login",
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                  "Sign In",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
@@ -60,28 +58,7 @@ class _LoginPageState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Remember me + Forgot password
-                Row(
-                  children: [
-                    Checkbox(
-                      value: rememberMe,
-                      onChanged: (val) {
-                        setState(() => rememberMe = val ?? false);
-                      },
-                    ),
-                    const Text("Remember me"),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () {},
-                      child: const Text(
-                        "Forgot Password",
-                        style: TextStyle(color: Colors.black54),
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Login Button
+                // Login Button (email/password placeholder)
                 ElevatedButton(
                   onPressed: () {},
                   style: ElevatedButton.styleFrom(
@@ -95,10 +72,37 @@ class _LoginPageState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Google Button
+                // Google Sign-In Button
                 OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: Image.asset("assets/images/google.png", height: 20),
+                  onPressed: () async {
+                    final user = await AuthService.signInWithGoogle();
+                    if (user != null) {
+                      // Successfully logged in
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text("Welcome back, ${user.displayName}!"),
+                        ),
+                      );
+
+                      // Navigate to DashboardScreen
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const DashboardScreen(),
+                        ),
+                      );
+                    } else {
+                      // Sign-in failed or cancelled
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text("Google sign-in cancelled")),
+                      );
+                    }
+                  },
+                  icon: Image.asset(
+                    "assets/images/google.png",
+                    height: 20,
+                  ),
                   label: const Text(
                     "Sign In with Google",
                     style: TextStyle(color: Colors.black),
@@ -112,14 +116,14 @@ class _LoginPageState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Switch to SignUp
+                // Switch to Sign Up
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text("Don’t have an account? "),
+                    const Text("Don't have an account? "),
                     GestureDetector(
                       onTap: () {
-                        Navigator.push(
+                        Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
                             builder: (_) => const SignupScreen(),

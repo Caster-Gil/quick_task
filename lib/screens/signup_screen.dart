@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+import 'dashboard_screen.dart';
 import 'login_screen.dart';
 
 class SignupScreen extends StatelessWidget {
@@ -70,7 +72,7 @@ class SignupScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // Signup Button
+                // Signup Button (email/password, can implement later)
                 ElevatedButton(
                   onPressed: () {},
                   style: ElevatedButton.styleFrom(
@@ -84,9 +86,33 @@ class SignupScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                // Google Button
+                // Google Sign-Up Button
                 OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: () async {
+                    final user = await AuthService.signInWithGoogle();
+                    if (user != null) {
+                      // Signed in successfully
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text("Welcome, ${user.displayName}!"),
+                        ),
+                      );
+
+                      // Navigate to dashboard
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const DashboardScreen(),
+                        ),
+                      );
+                    } else {
+                      // Sign-in failed or cancelled
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text("Google sign-in cancelled")),
+                      );
+                    }
+                  },
                   icon: Image.asset(
                     "assets/images/google.png",
                     height: 20,

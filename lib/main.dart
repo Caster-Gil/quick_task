@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart'; // Import Firebase
 import 'screens/splash_screen.dart';
 
-void main() {
-  runApp(QuickTaskApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // Ensure binding is initialized
+  await Firebase.initializeApp(); // Initialize Firebase
+  runApp(const QuickTaskApp());
 }
 
 class QuickTaskApp extends StatelessWidget {

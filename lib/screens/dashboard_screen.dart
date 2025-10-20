@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'task_list.dart';
+import 'tasklist_screen.dart';
 import 'project_screen.dart';
 import 'create_task_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -28,9 +28,21 @@ class DashboardScreen extends StatelessWidget {
               child: PieChart(
                 PieChartData(
                   sections: [
-                    PieChartSectionData(value: 35, color: Colors.green, title: "35%"),
-                    PieChartSectionData(value: 25, color: Colors.blue, title: "25%"),
-                    PieChartSectionData(value: 40, color: Colors.red, title: "40%"),
+                    PieChartSectionData(
+                      value: 35,
+                      color: Colors.green,
+                      title: "35%",
+                    ),
+                    PieChartSectionData(
+                      value: 25,
+                      color: Colors.blue,
+                      title: "25%",
+                    ),
+                    PieChartSectionData(
+                      value: 40,
+                      color: Colors.red,
+                      title: "40%",
+                    ),
                   ],
                 ),
               ),
@@ -82,27 +94,36 @@ class DashboardScreen extends StatelessWidget {
               children: [
                 ElevatedButton(
                   child: const Text("Task List"),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const TaskListScreen()),
-                  ),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          "No projects available. Create a project first!",
+                        ),
+                      ),
+                    );
+                  },
                 ),
                 ElevatedButton(
                   child: const Text("Projects"),
                   onPressed: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const ProjectsScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const ProjectsScreen(),
+                    ),
                   ),
                 ),
                 ElevatedButton(
                   child: const Text("Create Task"),
                   onPressed: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const CreateTaskScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const CreateTaskScreen(),
+                    ),
                   ),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),

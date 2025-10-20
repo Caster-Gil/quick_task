@@ -1,3 +1,14 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.2.1") // AGP version
+        classpath("com.google.gms:google-services:4.3.15") // Firebase plugin
+    }
+}
+
 allprojects {
     repositories {
         google()
@@ -5,6 +16,7 @@ allprojects {
     }
 }
 
+// Optional: move build directories (your existing custom code)
 val newBuildDir: Directory =
     rootProject.layout.buildDirectory
         .dir("../../build")

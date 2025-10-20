@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_fortune_wheel/flutter_fortune_wheel.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'task_list.dart';
+import 'tasklist_screen.dart';
 
 class CreateTaskScreen extends StatefulWidget {
-  const CreateTaskScreen({super.key});
+  final String? projectId; // optional projectId
+
+  const CreateTaskScreen({super.key, this.projectId});
 
   @override
   State<CreateTaskScreen> createState() => _CreateTaskScreenState();
@@ -77,9 +79,9 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     }
 
     if (user == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("No user logged in")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No user logged in")),
+      );
       return;
     }
 
@@ -93,9 +95,11 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         'due_date': dueDate,
         'created_by': user.uid,
         'created_at': FieldValue.serverTimestamp(),
+        'project_id': widget.projectId ?? '', // store projectId if available
       });
 
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Task created successfully!")),
       );
@@ -107,18 +111,31 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       dateController.clear();
       setState(() => lastSelectedIndex = null);
 
-      // Redirect to Task List screen after short delay
+      // Redirect after short delay
       await Future.delayed(const Duration(milliseconds: 800));
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const TaskListScreen()),
-        );
+        if (widget.projectId != null && widget.projectId!.isNotEmpty) {
+          // Navigate to TaskListScreen if project exists
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  TaskListScreen(projectId: widget.projectId!),
+            ),
+          );
+        } else {
+          // Show message if no project exists
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text(
+                    "Task created, but no project exists. Create a project first.")),
+          );
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error creating task: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error creating task: $e")),
+      );
     } finally {
       setState(() => isLoading = false);
     }
@@ -151,16 +168,13 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               ),
             ),
             const SizedBox(height: 12),
-
             isLoading
                 ? const CircularProgressIndicator()
                 : ElevatedButton(
                     onPressed: createTask,
                     child: const Text("Create"),
                   ),
-
             const SizedBox(height: 20),
-
             Row(
               children: [
                 Expanded(
@@ -175,9 +189,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                 ElevatedButton(onPressed: addName, child: const Text("Add")),
               ],
             ),
-
             const SizedBox(height: 20),
-
             SizedBox(
               height: 220,
               child: members.isEmpty
@@ -207,10 +219,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                       ],
                     ),
             ),
-
             const SizedBox(height: 12),
             ElevatedButton(onPressed: spinWheel, child: const Text("Spin")),
-
             const SizedBox(height: 12),
             if (lastSelectedIndex != null)
               Text(
