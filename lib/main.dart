@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart'; // Import Firebase
+import 'firebase_options.dart'; // Import generated Firebase options
 import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Ensure binding is initialized
-  await Firebase.initializeApp(); // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform, // Use generated options
+  );
   runApp(const QuickTaskApp());
 }
 
@@ -19,7 +22,7 @@ class QuickTaskApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: SplashScreen(),
+      home: const SplashScreen(), // Keep your existing splash screen
     );
   }
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'project_screen.dart';
 
 class CreateProjectScreen extends StatelessWidget {
   const CreateProjectScreen({super.key});
@@ -9,7 +11,8 @@ class CreateProjectScreen extends StatelessWidget {
     final TextEditingController createdByController = TextEditingController();
     final TextEditingController descriptionController = TextEditingController();
     final TextEditingController dateController = TextEditingController();
-    final TextEditingController projectIdController = TextEditingController();
+
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F3F3),
@@ -24,7 +27,14 @@ class CreateProjectScreen extends StatelessWidget {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.arrow_back),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ProjectsScreen(),
+                        ),
+                      );
+                    },
                   ),
                   const Text(
                     "New Project",
@@ -38,10 +48,8 @@ class CreateProjectScreen extends StatelessWidget {
             Expanded(
               child: SingleChildScrollView(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -87,13 +95,6 @@ class CreateProjectScreen extends StatelessWidget {
                           controller: dateController,
                           decoration: _inputDecoration("Date Created"),
                         ),
-                        const SizedBox(height: 12),
-
-                        // Project ID Field
-                        TextField(
-                          controller: projectIdController,
-                          decoration: _inputDecoration("Project ID"),
-                        ),
                         const SizedBox(height: 20),
 
                         // Create Button
@@ -102,8 +103,64 @@ class CreateProjectScreen extends StatelessWidget {
                             width: 120,
                             height: 40,
                             child: ElevatedButton(
-                              onPressed: () {
-                                // Handle create logic
+                              onPressed: () async {
+                                final title = titleController.text.trim();
+                                final createdBy =
+                                    createdByController.text.trim();
+                                final description =
+                                    descriptionController.text.trim();
+                                final date = dateController.text.trim();
+
+                                if (title.isEmpty ||
+                                    createdBy.isEmpty ||
+                                    description.isEmpty ||
+                                    date.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          "Please fill in all required fields."),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                try {
+                                  // Auto-generate project ID
+                                  final projectRef =
+                                      firestore.collection('projects').doc();
+
+                                  await projectRef.set({
+                                    'id': projectRef.id,
+                                    'name': title,
+                                    'createdBy': createdBy,
+                                    'description': description,
+                                    'dateCreated': date,
+                                    'createdAt': FieldValue.serverTimestamp(),
+                                  });
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          "Project '${title}' created successfully!"),
+                                    ),
+                                  );
+
+                                  // Navigate back to ProjectsScreen
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const ProjectsScreen(),
+                                    ),
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content:
+                                          Text("Error creating project. Try again."),
+                                    ),
+                                  );
+                                }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF76A7D2),
@@ -140,7 +197,8 @@ class CreateProjectScreen extends StatelessWidget {
       hintStyle: const TextStyle(color: Colors.black45),
       filled: true,
       fillColor: const Color(0xFFF1F1F1),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       border: OutlineInputBorder(
         borderSide: BorderSide.none,
         borderRadius: BorderRadius.circular(12),
