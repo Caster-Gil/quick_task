@@ -1,18 +1,27 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'project_screen.dart';
 
 class CreateProjectScreen extends StatelessWidget {
   const CreateProjectScreen({super.key});
 
+  // Generate a random alphanumeric join code
+  String _generateProjectCode({int length = 6}) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final rand = Random();
+    return List.generate(length, (index) => chars[rand.nextInt(chars.length)]).join();
+  }
+
   @override
   Widget build(BuildContext context) {
     final TextEditingController titleController = TextEditingController();
-    final TextEditingController createdByController = TextEditingController();
     final TextEditingController descriptionController = TextEditingController();
     final TextEditingController dateController = TextEditingController();
 
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    final currentUser = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F3F3),
@@ -20,21 +29,14 @@ class CreateProjectScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top bar with back arrow and title
+            // Top bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
                   IconButton(
                     icon: const Icon(Icons.arrow_back),
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ProjectsScreen(),
-                        ),
-                      );
-                    },
+                    onPressed: () => Navigator.pop(context),
                   ),
                   const Text(
                     "New Project",
@@ -44,12 +46,11 @@ class CreateProjectScreen extends StatelessWidget {
               ),
             ),
 
-            // Form card
+            // Form
             Expanded(
               child: SingleChildScrollView(
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -62,35 +63,25 @@ class CreateProjectScreen extends StatelessWidget {
                       children: [
                         const Text(
                           "Project Details",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 16),
 
-                        // Title Field
+                        // Title
                         TextField(
                           controller: titleController,
                           decoration: _inputDecoration("Title"),
                         ),
                         const SizedBox(height: 12),
 
-                        // Created By Field
-                        TextField(
-                          controller: createdByController,
-                          decoration: _inputDecoration("Created by"),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Description Field
+                        // Description
                         TextField(
                           controller: descriptionController,
                           decoration: _inputDecoration("Project Description"),
                         ),
                         const SizedBox(height: 12),
 
-                        // Date Created Field
+                        // Date
                         TextField(
                           controller: dateController,
                           decoration: _inputDecoration("Date Created"),
@@ -105,60 +96,54 @@ class CreateProjectScreen extends StatelessWidget {
                             child: ElevatedButton(
                               onPressed: () async {
                                 final title = titleController.text.trim();
-                                final createdBy =
-                                    createdByController.text.trim();
-                                final description =
-                                    descriptionController.text.trim();
+                                final description = descriptionController.text.trim();
                                 final date = dateController.text.trim();
 
-                                if (title.isEmpty ||
-                                    createdBy.isEmpty ||
-                                    description.isEmpty ||
-                                    date.isEmpty) {
+                                if (title.isEmpty || description.isEmpty || date.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                          "Please fill in all required fields."),
-                                    ),
+                                    const SnackBar(content: Text("Please fill in all fields.")),
                                   );
                                   return;
                                 }
 
                                 try {
-                                  // Auto-generate project ID
-                                  final projectRef =
-                                      firestore.collection('projects').doc();
+                                  final projectRef = firestore.collection('projects').doc();
+                                  final code = _generateProjectCode();
+                                  final createdBy = currentUser?.displayName ?? 'Unknown';
+                                  final creatorId = currentUser?.uid ?? '';
 
                                   await projectRef.set({
                                     'id': projectRef.id,
                                     'name': title,
-                                    'createdBy': createdBy,
                                     'description': description,
                                     'dateCreated': date,
                                     'createdAt': FieldValue.serverTimestamp(),
+                                    'code': code,
+                                    'members': [createdBy],
+                                    'createdBy': createdBy,
+                                    'creator_id': creatorId,
                                   });
 
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
+                                  showDialog(
+                                    context: context,
+                                    builder: (_) => AlertDialog(
+                                      title: const Text("Project Created!"),
                                       content: Text(
-                                          "Project '${title}' created successfully!"),
-                                    ),
-                                  );
-
-                                  // Navigate back to ProjectsScreen
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const ProjectsScreen(),
+                                          "Your project code is: $code\nShare this code to allow others to join."),
+                                      actions: [
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                            Navigator.pop(context);
+                                          },
+                                          child: const Text("OK"),
+                                        ),
+                                      ],
                                     ),
                                   );
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content:
-                                          Text("Error creating project. Try again."),
-                                    ),
+                                    SnackBar(content: Text("Error creating project: $e")),
                                   );
                                 }
                               },
@@ -170,11 +155,7 @@ class CreateProjectScreen extends StatelessWidget {
                               ),
                               child: const Text(
                                 "Create",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600),
                               ),
                             ),
                           ),
@@ -197,8 +178,7 @@ class CreateProjectScreen extends StatelessWidget {
       hintStyle: const TextStyle(color: Colors.black45),
       filled: true,
       fillColor: const Color(0xFFF1F1F1),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       border: OutlineInputBorder(
         borderSide: BorderSide.none,
         borderRadius: BorderRadius.circular(12),

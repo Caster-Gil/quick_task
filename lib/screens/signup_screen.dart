@@ -1,10 +1,32 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/user_service.dart'; 
 import 'dashboard_screen.dart';
 import 'login_screen.dart';
 
-class SignupScreen extends StatelessWidget {
+class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
+
+  @override
+  State<SignupScreen> createState() => _SignupScreenState();
+}
+
+class _SignupScreenState extends State<SignupScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+
+  bool _passwordVisible = false;
+  bool _confirmPasswordVisible = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,16 +46,14 @@ class SignupScreen extends StatelessWidget {
               children: [
                 const Text(
                   "Create an account",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
 
                 // Email
                 TextField(
+                  controller: _emailController,
                   decoration: InputDecoration(
                     labelText: "Email",
                     hintText: "Enter your email",
@@ -46,11 +66,23 @@ class SignupScreen extends StatelessWidget {
 
                 // Password
                 TextField(
-                  obscureText: true,
+                  controller: _passwordController,
+                  obscureText: !_passwordVisible,
                   decoration: InputDecoration(
                     labelText: "Password",
                     hintText: "Enter your password",
-                    suffixIcon: const Icon(Icons.visibility_outlined),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _passwordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _passwordVisible = !_passwordVisible;
+                        });
+                      },
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -60,11 +92,23 @@ class SignupScreen extends StatelessWidget {
 
                 // Confirm Password
                 TextField(
-                  obscureText: true,
+                  controller: _confirmPasswordController,
+                  obscureText: !_confirmPasswordVisible,
                   decoration: InputDecoration(
-                    labelText: "Confirmation Password",
-                    hintText: "Confirm your password",
-                    suffixIcon: const Icon(Icons.visibility_outlined),
+                    labelText: "Confirm Password",
+                    hintText: "Re-enter your password",
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _confirmPasswordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _confirmPasswordVisible = !_confirmPasswordVisible;
+                        });
+                      },
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -72,9 +116,56 @@ class SignupScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // Signup Button (email/password, can implement later)
+                // Sign Up Button
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () async {
+                    final email = _emailController.text.trim();
+                    final password = _passwordController.text.trim();
+                    final confirmPassword = _confirmPasswordController.text
+                        .trim();
+
+                    if (password != confirmPassword) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Passwords do not match."),
+                        ),
+                      );
+                      return;
+                    }
+
+                    final userCredential = await AuthService.signUpWithEmail(
+                      email,
+                      password,
+                    );
+
+                    if (userCredential != null) {
+                      // Create Firestore user document
+                      final user = userCredential.user;
+                      if (user != null) {
+                        await UserService().createUserDocument(user);
+                      }
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            "Welcome, ${userCredential.user?.email}!",
+                          ),
+                        ),
+                      );
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DashboardScreen(),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Sign-up failed, please try again."),
+                        ),
+                      );
+                    }
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF6E9CC4),
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -91,32 +182,29 @@ class SignupScreen extends StatelessWidget {
                   onPressed: () async {
                     final user = await AuthService.signInWithGoogle();
                     if (user != null) {
-                      // Signed in successfully
+                      // Create Firestore user document for Google user
+                      await UserService().createUserDocument(user);
+
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text("Welcome, ${user.displayName}!"),
                         ),
                       );
-
-                      // Navigate to dashboard
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const DashboardScreen(),
+                          builder: (_) => DashboardScreen(),
                         ),
                       );
                     } else {
-                      // Sign-in failed or cancelled
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                            content: Text("Google sign-in cancelled")),
+                          content: Text("Google sign-in cancelled"),
+                        ),
                       );
                     }
                   },
-                  icon: Image.asset(
-                    "assets/images/google.png",
-                    height: 20,
-                  ),
+                  icon: Image.asset("assets/images/google.png", height: 20),
                   label: const Text(
                     "Sign Up with Google",
                     style: TextStyle(color: Colors.black),

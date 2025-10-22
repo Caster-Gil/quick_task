@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'setting_screen.dart'; // Make sure this file exists
+import 'setting_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -28,7 +28,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _loadNotificationSettings();
   }
 
-  // 🔹 Load existing settings from Firestore
+  // Load existing settings from Firestore
   Future<void> _loadNotificationSettings() async {
     try {
       if (user == null) return;
@@ -58,7 +58,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  // 🔹 Save settings to Firestore
+  // Save settings to Firestore
   Future<void> _saveNotificationSettings() async {
     try {
       if (user == null) return;
@@ -68,14 +68,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           .collection('settings')
           .doc('notifications')
           .set({
-            'showNotifications': showNotifications,
-            'showBadges': showBadges,
-            'floatingNotifications': floatingNotifications,
-            'lockScreenNotifications': lockScreenNotifications,
-            'allowSound': allowSound,
-            'allowVibration': allowVibration,
-            'allowLED': allowLED,
-          }, SetOptions(merge: true));
+        'showNotifications': showNotifications,
+        'showBadges': showBadges,
+        'floatingNotifications': floatingNotifications,
+        'lockScreenNotifications': lockScreenNotifications,
+        'allowSound': allowSound,
+        'allowVibration': allowVibration,
+        'allowLED': allowLED,
+      }, SetOptions(merge: true));
     } catch (e) {
       debugPrint("Error saving notification settings: $e");
     }
@@ -84,7 +84,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F3F3),
+      backgroundColor: const Color(0xFFF3F3F3), 
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),

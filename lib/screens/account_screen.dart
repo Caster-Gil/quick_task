@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'login_screen.dart'; // Make sure this imports your login screen
 import 'setting_screen.dart';
 
 class AccountScreen extends StatefulWidget {
@@ -70,6 +71,14 @@ class _AccountScreenState extends State<AccountScreen> {
     }
   }
 
+  Future<void> logOut() async {
+    await FirebaseAuth.instance.signOut();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -78,12 +87,12 @@ class _AccountScreenState extends State<AccountScreen> {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Top bar
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                    icon: const Icon(Icons.arrow_back),
                     onPressed: () {
                       Navigator.pushReplacement(
                         context,
@@ -101,6 +110,8 @@ class _AccountScreenState extends State<AccountScreen> {
                 ],
               ),
               const SizedBox(height: 24),
+
+              // Profile content
               Expanded(
                 child: SingleChildScrollView(
                   child: Container(
@@ -116,7 +127,7 @@ class _AccountScreenState extends State<AccountScreen> {
                           children: [
                             const CircleAvatar(
                               radius: 30,
-                              backgroundColor: Color(0xFFD6E4F0),
+                              backgroundColor: Color.fromARGB(255, 255, 255, 255),
                               child: Icon(
                                 Icons.person,
                                 size: 36,
@@ -146,43 +157,30 @@ class _AccountScreenState extends State<AccountScreen> {
                           ],
                         ),
                         const SizedBox(height: 20),
+
                         const Text(
                           "Bio",
                           style: TextStyle(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 4),
                         isEditing
-                            ? Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  TextField(
-                                    controller: bioController,
-                                    maxLines: 3,
-                                    maxLength: 250,
-                                    decoration: const InputDecoration(
-                                      hintText:
-                                          "Who you are in less than 250 characters",
-                                      border: UnderlineInputBorder(),
-                                      counterText: '',
-                                    ),
-                                  ),
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: Text(
-                                      "\${bioController.text.length}/250",
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                            ? TextField(
+                                controller: bioController,
+                                maxLines: 3,
+                                maxLength: 250,
+                                decoration: const InputDecoration(
+                                  hintText:
+                                      "Who you are in less than 250 characters",
+                                  border: UnderlineInputBorder(),
+                                  counterText: '',
+                                ),
                               )
                             : Text(
                                 bio.isNotEmpty ? bio : "No bio added yet",
                                 style: const TextStyle(color: Colors.black87),
                               ),
                         const SizedBox(height: 16),
+
                         const Text(
                           "Username",
                           style: TextStyle(fontWeight: FontWeight.w600),
@@ -203,6 +201,7 @@ class _AccountScreenState extends State<AccountScreen> {
                                 style: const TextStyle(color: Colors.black87),
                               ),
                         const SizedBox(height: 16),
+
                         const Text(
                           "E-Mail",
                           style: TextStyle(fontWeight: FontWeight.w600),
@@ -216,6 +215,8 @@ class _AccountScreenState extends State<AccountScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
+
+                        // Edit / Save button
                         Center(
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
@@ -249,6 +250,32 @@ class _AccountScreenState extends State<AccountScreen> {
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Red Log Out button at the bottom
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: logOut,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text(
+                      "Log Out",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),

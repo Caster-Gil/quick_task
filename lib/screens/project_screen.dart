@@ -1,198 +1,221 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'tasklist_screen.dart';
 import 'create_project_screen.dart';
-import 'dashboard_screen.dart';
 
 class ProjectsScreen extends StatelessWidget {
-  const ProjectsScreen({super.key});
+  final String? selectedProjectId;
 
-  @override
-  Widget build(BuildContext context) {
-    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  ProjectsScreen({Key? key, this.selectedProjectId}) : super(key: key);
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const DashboardScreen(),
-              ),
-            );
-          },
+  Future<void> _joinProject(BuildContext context) async {
+    final TextEditingController codeController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Join Project'),
+        content: TextField(
+          controller: codeController,
+          decoration: const InputDecoration(hintText: 'Enter project code'),
         ),
-        title: const Text("Projects"),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const CreateProjectScreen(),
-                ),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final code = codeController.text.trim();
+              if (code.isEmpty) return;
+
+              final query = await FirebaseFirestore.instance
+                  .collection('projects')
+                  .where('code', isEqualTo: code)
+                  .get();
+
+              if (query.docs.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Invalid project code!')),
+                );
+                return;
+              }
+
+              final projectDoc = query.docs.first;
+              final userId = FirebaseAuth.instance.currentUser!.uid;
+
+              final members = List<String>.from(projectDoc['members'] ?? []);
+              if (!members.contains(userId)) {
+                members.add(userId);
+                await FirebaseFirestore.instance
+                    .collection('projects')
+                    .doc(projectDoc.id)
+                    .update({'members': members});
+              }
+
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Joined project successfully!')),
               );
             },
-            child: const Text(
-              "New Project",
-              style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-            ),
+            child: const Text('Join'),
           ),
-          const SizedBox(width: 10),
         ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Projects in progress",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 10),
-                    StreamBuilder<QuerySnapshot>(
-                      stream: firestore.collection('projects').snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                              child: CircularProgressIndicator());
-                        }
-
-                        if (!snapshot.hasData ||
-                            snapshot.data!.docs.isEmpty) {
-                          return const Padding(
-                            padding: EdgeInsets.all(8.0),
-                            child: Text(
-                              "No projects in progress.",
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          );
-                        }
-
-                        final projects = snapshot.data!.docs;
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: projects
-                              .map((project) => Padding(
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 4),
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.circle,
-                                            color: Colors.blue, size: 10),
-                                        const SizedBox(width: 8),
-                                        Text(project['name']),
-                                      ],
-                                    ),
-                                  ))
-                              .toList(),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    Center(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade400,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onPressed: () {
-                          _showJoinProjectDialog(context, firestore);
-                        },
-                        child: const Text(
-                          "Join Project",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
 
-  // Join Project Popup
-  void _showJoinProjectDialog(
-      BuildContext context, FirebaseFirestore firestore) {
-    final TextEditingController projectIdController = TextEditingController();
+  Future<String> _getCreatorUsername(String creatorId) async {
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(creatorId)
+        .get();
+    if (doc.exists && doc.data()?['username'] != null) {
+      return doc['username'];
+    }
+    return 'Unknown';
+  }
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Join Project"),
-          content: TextField(
-            controller: projectIdController,
-            decoration: const InputDecoration(
-              hintText: "Enter Project ID",
+  @override
+  Widget build(BuildContext context) {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Projects"),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: const Color(0xFF76A7D2),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CreateProjectScreen(),
+                  ),
+                );
+              },
+              child: const Text(
+                "New Project",
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final projectId = projectIdController.text.trim();
-                if (projectId.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Please enter a valid Project ID."),
-                    ),
-                  );
-                  return;
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: firestore.collection('projects').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text("No projects available."));
                 }
 
-                try {
-                  final projectDoc =
-                      await firestore.collection('projects').doc(projectId).get();
+                // Filter: show only projects where user is creator or member
+                final projects = snapshot.data!.docs.where((project) {
+                  final data = project.data() as Map<String, dynamic>? ?? {};
+                  final creatorId = data['creator_id'] ?? '';
+                  final members = List<String>.from(data['members'] ?? []);
+                  return creatorId == currentUserId ||
+                      members.contains(currentUserId);
+                }).toList();
 
-                  if (projectDoc.exists) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                            "Joined project: ${projectDoc['name']} successfully!"),
-                      ),
-                    );
-                    Navigator.pop(context);
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Project ID not found."),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Error joining project."),
-                    ),
+                if (projects.isEmpty) {
+                  return const Center(
+                    child: Text("No projects available for you."),
                   );
                 }
+
+                return ListView.builder(
+                  itemCount: projects.length,
+                  itemBuilder: (context, index) {
+                    final project = projects[index];
+                    final projectData =
+                        project.data() as Map<String, dynamic>? ?? {};
+                    final isSelected = project.id == selectedProjectId;
+                    final creatorId = projectData['creator_id'] ?? '';
+
+                    return FutureBuilder<String>(
+                      future: _getCreatorUsername(creatorId),
+                      builder: (context, snapshot) {
+                        final creatorName = snapshot.data ?? 'Loading...';
+
+                        return Card(
+                          key: ValueKey(project.id),
+                          color: isSelected
+                              ? Colors.blue.shade50
+                              : Colors.white,
+                          child: ListTile(
+                            title: Text(
+                              projectData['name'] ?? 'Untitled Project',
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Created by: $creatorName"),
+                                if (creatorId == currentUserId &&
+                                    projectData['code'] != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4.0),
+                                    child: Text(
+                                      "Project Code: ${projectData['code']}",
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orange,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            trailing: const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 16,
+                            ),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => TaskListScreen(
+                                    projectId: project.id,
+                                    projectName:
+                                        projectData['name'] ?? 'Project',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
               },
-              child: const Text("Join"),
             ),
-          ],
-        );
-      },
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => _joinProject(context),
+                child: const Text('Join Project'),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

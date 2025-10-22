@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart'; // Import Firebase
-import 'firebase_options.dart'; // Import generated Firebase options
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Ensure binding is initialized
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform, // Use generated options
-  );
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print("Firebase initialized successfully");
+  } catch (e) {
+    print("Firebase initialization failed: $e");
+  }
   runApp(const QuickTaskApp());
 }
 
@@ -16,13 +21,37 @@ class QuickTaskApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'QuickTask',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
+    return FutureBuilder(
+      future: Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
       ),
-      home: const SplashScreen(), // Keep your existing splash screen
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          return MaterialApp(
+            title: 'QuickTask',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(primarySwatch: Colors.blue),
+            home: const SplashScreen(),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: Text("Firebase Initialization Error: ${snapshot.error}"),
+              ),
+            ),
+          );
+        }
+
+        // Loading indicator while initializing
+        return const MaterialApp(
+          home: Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          ),
+        );
+      },
     );
   }
 }

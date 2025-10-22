@@ -10,7 +10,7 @@ class SettingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[200],
+      backgroundColor: const Color(0xFFF3F3F3),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -29,11 +29,8 @@ class SettingScreen extends StatelessWidget {
                   const SizedBox(width: 8),
                   const Text(
                     "Settings",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  )
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
             ),
@@ -47,7 +44,8 @@ class SettingScreen extends StatelessWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Column(
+                child: ListView(
+                  padding: EdgeInsets.zero,
                   children: [
                     // Search Bar
                     Container(
@@ -66,7 +64,7 @@ class SettingScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
 
-                    // Settings list with navigation
+                    // Settings items with dividers
                     buildSettingsItem(
                       context,
                       Icons.person,
@@ -104,24 +102,28 @@ class SettingScreen extends StatelessWidget {
     );
   }
 
+  // Build individual settings item
   Widget buildSettingsItem(
-      BuildContext context, IconData icon, String title, Widget page) {
+    BuildContext context,
+    IconData icon,
+    String title,
+    Widget page,
+  ) {
     return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 0),
       leading: Icon(icon, color: Colors.black),
       title: Text(
         title,
         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
       ),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16), // Arrow on right
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => page),
-        );
+        Navigator.push(context, MaterialPageRoute(builder: (context) => page));
       },
     );
   }
 
+  // Build divider line
   Widget buildDivider() {
     return const Divider(
       height: 1,

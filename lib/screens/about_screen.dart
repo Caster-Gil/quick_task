@@ -6,7 +6,7 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F3F3), // light grey background
+      backgroundColor: const Color(0xFFF3F3F3), // Match Dashboard background
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -19,7 +19,7 @@ class AboutScreen extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Icons.arrow_back),
                     onPressed: () {
-                      Navigator.pop(context); // 👈 this goes back to Settings
+                      Navigator.pop(context); // Back to Settings
                     },
                   ),
                   const SizedBox(width: 4),
@@ -34,9 +34,10 @@ class AboutScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // Card container
+              // Card container with margin
               Container(
                 width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 16), // spacing like Dashboard
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,

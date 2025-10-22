@@ -1,10 +1,27 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/user_service.dart';
 import 'dashboard_screen.dart';
 import 'signup_screen.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _passwordVisible = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,16 +41,14 @@ class LoginScreen extends StatelessWidget {
               children: [
                 const Text(
                   "Sign In",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
 
                 // Email
                 TextField(
+                  controller: _emailController,
                   decoration: InputDecoration(
                     labelText: "Email",
                     hintText: "Enter your email",
@@ -46,11 +61,23 @@ class LoginScreen extends StatelessWidget {
 
                 // Password
                 TextField(
-                  obscureText: true,
+                  controller: _passwordController,
+                  obscureText: !_passwordVisible,
                   decoration: InputDecoration(
                     labelText: "Password",
                     hintText: "Enter your password",
-                    suffixIcon: const Icon(Icons.visibility_outlined),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _passwordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _passwordVisible = !_passwordVisible;
+                        });
+                      },
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -58,9 +85,57 @@ class LoginScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // Login Button (email/password placeholder)
+                // Login Button (Email/Password)
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () async {
+                    final email = _emailController.text.trim();
+                    final password = _passwordController.text.trim();
+
+                    if (email.isEmpty || password.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Please enter email and password"),
+                        ),
+                      );
+                      return;
+                    }
+
+                    final userCredential = await AuthService.signInWithEmail(
+                      email,
+                      password,
+                    );
+
+                    if (userCredential != null) {
+                      // Ensure Firestore user document exists
+                      final user = userCredential.user;
+                      if (user != null) {
+                        await UserService().createUserDocument(user);
+                      }
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            "Welcome back, ${userCredential.user?.email}!",
+                          ),
+                        ),
+                      );
+
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DashboardScreen(),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Login failed, please check credentials",
+                          ),
+                        ),
+                      );
+                    }
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF6E9CC4),
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -77,32 +152,30 @@ class LoginScreen extends StatelessWidget {
                   onPressed: () async {
                     final user = await AuthService.signInWithGoogle();
                     if (user != null) {
-                      // Successfully logged in
+                      // Ensure Firestore user document exists
+                      await UserService().createUserDocument(user);
+
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text("Welcome back, ${user.displayName}!"),
                         ),
                       );
 
-                      // Navigate to DashboardScreen
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const DashboardScreen(),
+                          builder: (_) => DashboardScreen(),
                         ),
                       );
                     } else {
-                      // Sign-in failed or cancelled
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                            content: Text("Google sign-in cancelled")),
+                          content: Text("Google sign-in cancelled"),
+                        ),
                       );
                     }
                   },
-                  icon: Image.asset(
-                    "assets/images/google.png",
-                    height: 20,
-                  ),
+                  icon: Image.asset("assets/images/google.png", height: 20),
                   label: const Text(
                     "Sign In with Google",
                     style: TextStyle(color: Colors.black),

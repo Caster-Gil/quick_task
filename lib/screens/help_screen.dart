@@ -43,7 +43,7 @@ class HelpScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
-                  "Need help? Access FAQs, contact support, or report an issue. We're here to assist you with any problems you may face while using QuickTask.",
+                  "Need help? Access FAQs, contact support, or report an issue. We're here to assist you with any problems you may face while using QuickTask. Please contact us via this email: chandarath123@gmail.com",
                   style: TextStyle(
                     fontSize: 14,
                     height: 1.5,
